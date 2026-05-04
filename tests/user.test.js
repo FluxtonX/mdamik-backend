@@ -25,7 +25,7 @@ describe('User Endpoints', () => {
     });
 
     afterAll(async () => {
-        await User.deleteMany({});
+        await User.deleteOne({ _id: testUser._id });
         await mongoose.connection.close();
     });
 
