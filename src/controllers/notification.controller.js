@@ -5,11 +5,26 @@ const Notification = require('../models/Notification');
  */
 const getNotifications = async (req, res, next) => {
     try {
-        const notifications = await Notification.find({ recipient: req.user._id }).sort({ createdAt: -1 });
+        const { page = 1, limit = 20 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const query = { recipient: req.user._id };
+        const notifications = await Notification.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Notification.countDocuments(query);
 
         res.status(200).json({
             success: true,
             data: notifications,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
         });
     } catch (error) {
         next(error);

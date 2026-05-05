@@ -5,18 +5,30 @@ const Property = require('../models/Property');
  */
 const getProperties = async (req, res, next) => {
     try {
-        const { category, type, location } = req.query;
+        const { category, type, location, page = 1, limit = 10 } = req.query;
         const query = { isAvailable: true };
         
         if (category && category !== 'All') query.category = category;
         if (type) query.type = type;
         if (location) query.location = new RegExp(location, 'i');
 
-        const properties = await Property.find(query).sort({ createdAt: -1 });
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const properties = await Property.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Property.countDocuments(query);
 
         res.status(200).json({
             success: true,
             data: properties,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
         });
     } catch (error) {
         next(error);

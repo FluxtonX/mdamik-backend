@@ -176,11 +176,23 @@ Used to list all projects for the logged-in user.
 **Headers:**
 - `Authorization`: `Bearer FIREBASE_ID_TOKEN`
 
+**Query Params:**
+| Field | Type | Default |
+|-------|------|---------|
+| `page` | Number | `1` |
+| `limit` | Number | `10` |
+
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [ { ...project1 }, { ...project2 } ]
+  "data": [ ...projectObjects ],
+  "pagination": {
+    "total": 5,
+    "page": 1,
+    "limit": 10,
+    "pages": 1
+  }
 }
 ```
 
@@ -215,13 +227,18 @@ Used to update the status of a project (e.g., to 'In Progress').
 Used to list materials. Can be filtered by category.
 
 **Query Params:**
-- `category` (Optional): Cement, Steel, Sand, Ceramic, etc.
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `category` | String | - | Cement, Steel, Sand, Ceramic, etc. |
+| `page` | Number | `1` | Pagination page |
+| `limit` | Number | `10` | Items per page |
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [ { "title": "Portland Cement", "price": 12.5, ... } ]
+  "data": [ ...materialObjects ],
+  "pagination": { "total": 50, "page": 1, "limit": 10, "pages": 5 }
 }
 ```
 
@@ -233,13 +250,18 @@ Used to list materials. Can be filtered by category.
 Used to list engineers, architects, etc.
 
 **Query Params:**
-- `type` (Optional): Engineer, Architect, Contractor, etc.
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `type` | String | - | Engineer, Architect, Contractor, etc. |
+| `page` | Number | `1` | Pagination page |
+| `limit` | Number | `10` | Items per page |
 
 **Response (200):**
 ```json
 {
   "success": true,
-  "data": [ { "name": "Eng. Ahmed Ali", "rating": 4.8, ... } ]
+  "data": [ ...professionalObjects ],
+  "pagination": { "total": 20, "page": 1, "limit": 10, "pages": 2 }
 }
 ```
 
@@ -275,6 +297,166 @@ Used to record a new expense or payment for a project.
 
 ---
 
+## Payments
+
+> **Headers (Private routes):** `Authorization: Bearer FIREBASE_ID_TOKEN`
+
+---
+
+### 1. Get Supported Currencies
+`GET /payments/currencies`
+
+Returns all supported currencies for payment. **No auth required.**
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "USD": { "code": "usd", "name": "US Dollar",     "symbol": "$",   "stripeSupported": true  },
+    "SAR": { "code": "sar", "name": "Saudi Riyal",    "symbol": "﷼",  "stripeSupported": true  },
+    "SDG": { "code": "sdg", "name": "Sudanese Pound", "symbol": "ج.س", "stripeSupported": false },
+    "EGP": { "code": "egp", "name": "Egyptian Pound", "symbol": "E£",  "stripeSupported": true  },
+    "THB": { "code": "thb", "name": "Thai Baht",      "symbol": "฿",  "stripeSupported": true  }
+  }
+}
+```
+
+> ⚠️ **Note:** Sudanese Pound (SDG) is not supported by Stripe. Use `MyFawry` or `COD` gateway for SDG payments.
+
+---
+
+### 2. Initiate Payment
+`POST /payments/initiate` *(Private)*
+
+Initiates a payment for an existing transaction using the selected gateway.
+
+**Body:**
+```json
+{
+  "transactionId": "MONGO_OBJECT_ID",
+  "gateway": "Stripe",
+  "currency": "USD"
+}
+```
+
+| Field | Type | Required | Values |
+|-------|------|----------|--------|
+| `transactionId` | String (MongoID) | ✅ | - |
+| `gateway` | String | ✅ | `Stripe`, `MyFawry`, `BangkokBank`, `COD` |
+| `currency` | String | ❌ (default: `USD`) | `USD`, `SAR`, `SDG`, `EGP`, `THB` |
+
+**Response (200) — Stripe:**
+```json
+{
+  "success": true,
+  "data": { "clientSecret": "pi_xxx_secret_xxx", "id": "pi_xxx", "currency": "usd" },
+  "transaction": { ...transactionObject }
+}
+```
+
+**Response (200) — COD:**
+```json
+{
+  "success": true,
+  "message": "Cash on Delivery payment initiated.",
+  "data": { "method": "COD", "instructions": "Pay cash upon delivery." },
+  "transaction": { ...transactionObject }
+}
+```
+
+---
+
+### 3. Create Stripe Checkout Session (Web)
+`POST /payments/checkout/session` *(Private)*
+
+Creates a Stripe-hosted checkout page URL for web-based payments.
+
+**Body:**
+```json
+{
+  "transactionId": "MONGO_OBJECT_ID",
+  "currency": "USD",
+  "successUrl": "https://yourapp.com/payment-success",
+  "cancelUrl":  "https://yourapp.com/payment-cancel"
+}
+```
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "sessionId":  "cs_test_xxx",
+    "sessionUrl": "https://checkout.stripe.com/pay/cs_test_xxx",
+    "currency":   "usd"
+  },
+  "transaction": { ...transactionObject }
+}
+```
+
+---
+
+### 4. Confirm COD Payment
+`POST /payments/cod/confirm/:transactionId` *(Private)*
+
+Marks a Cash on Delivery transaction as `Completed` after physical delivery.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "COD payment confirmed as completed",
+  "transaction": { ...transactionObject, "status": "Completed" }
+}
+```
+
+---
+
+### 5. Stripe Webhook
+`POST /payments/webhook/stripe` *(Public — Stripe servers only)*
+
+Stripe notifies this endpoint of payment events. Secured via **HMAC signature verification**.
+
+| Event | Action |
+|-------|--------|
+| `payment_intent.succeeded` | → `Completed` |
+| `payment_intent.payment_failed` | → `Failed` |
+| `checkout.session.completed` | → `Completed` |
+| `charge.refunded` | → `Refunded` |
+
+> ⚠️ Set `STRIPE_WEBHOOK_SECRET` env variable from Stripe dashboard.
+
+---
+
+### 6. Fawry Webhook
+`POST /payments/webhook/fawry` *(Public — Fawry servers only)*
+
+MyFawry notifies this endpoint of payment events. Secured via **HMAC-SHA256 signature** in `x-fawry-signature` header.
+
+**Payload:**
+```json
+{ "referenceId": "FAWRY-xxx", "status": "PAID" }
+```
+
+> ⚠️ Set `FAWRY_WEBHOOK_SECRET` env variable.
+
+---
+
+### 7. Bangkok Bank Webhook
+`POST /payments/webhook/bangkokbank` *(Public — Bangkok Bank servers only)*
+
+Bangkok Bank notifies this endpoint. Secured via **HMAC-SHA256 signature** in `x-bkb-signature` header.
+
+**Payload:**
+```json
+{ "referenceId": "BKB-xxx", "status": "SUCCESS" }
+```
+
+> ⚠️ Set `BANGKOK_BANK_WEBHOOK_SECRET` env variable.
+
+---
+
 ## Real Estate
 
 ### 1. Get Properties
@@ -283,9 +465,22 @@ Used to record a new expense or payment for a project.
 Used to list properties for buy/sell/rent.
 
 **Query Params:**
-- `category`: Apartment, Villa, Land, Office.
-- `type`: Buy, Sell, Rent.
-- `location`: Search by location.
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `category` | String | `All` | Filter by category (Villa, Apartment, etc.) |
+| `type` | String | - | `Buy` or `Rent` |
+| `location` | String | - | Search by location (partial match) |
+| `page` | Number | `1` | Pagination page |
+| `limit` | Number | `10` | Items per page |
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [ ...propertyObjects ],
+  "pagination": { "total": 12, "page": 1, "limit": 10, "pages": 2 }
+}
+```
 
 ---
 
@@ -317,6 +512,21 @@ Used to list properties for buy/sell/rent.
 ### 2. Get Messages
 `GET /chat/messages/:otherUserId`
 
+**Query Params:**
+| Field | Type | Default |
+|-------|------|---------|
+| `page` | Number | `1` |
+| `limit` | Number | `20` |
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [ ...messageObjects ],
+  "pagination": { "total": 45, "page": 1, "limit": 20, "pages": 3 }
+}
+```
+
 ---
 
 ### 3. Get Conversation List
@@ -324,12 +534,42 @@ Used to list properties for buy/sell/rent.
 
 Returns a list of users you have chatted with, along with the last message.
 
+**Query Params:**
+| Field | Type | Default |
+|-------|------|---------|
+| `page` | Number | `1` |
+| `limit` | Number | `10` |
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [ ...conversationObjects ],
+  "pagination": { "total": 15, "page": 1, "limit": 10, "pages": 2 }
+}
+```
+
 ---
 
 ## Notifications
 
 ### 1. Get Notifications
 `GET /notifications`
+
+**Query Params:**
+| Field | Type | Default |
+|-------|------|---------|
+| `page` | Number | `1` |
+| `limit` | Number | `20` |
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [ ...notificationObjects ],
+  "pagination": { "total": 8, "page": 1, "limit": 20, "pages": 1 }
+}
+```
 
 ---
 

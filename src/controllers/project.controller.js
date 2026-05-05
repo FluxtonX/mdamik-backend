@@ -35,11 +35,25 @@ const createProject = async (req, res, next) => {
  */
 const getMyProjects = async (req, res, next) => {
     try {
-        const projects = await Project.find({ userId: req.user._id }).sort({ createdAt: -1 });
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const projects = await Project.find({ userId: req.user._id })
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Project.countDocuments({ userId: req.user._id });
 
         res.status(200).json({
             success: true,
             data: projects,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
         });
     } catch (error) {
         next(error);

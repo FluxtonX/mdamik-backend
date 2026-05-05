@@ -6,16 +6,32 @@ const Message = require('../models/Message');
 const getMessages = async (req, res, next) => {
     try {
         const { otherUserId } = req.params;
-        const messages = await Message.find({
+        const { page = 1, limit = 20 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        const query = {
             $or: [
                 { sender: req.user._id, recipient: otherUserId },
                 { sender: otherUserId, recipient: req.user._id }
             ]
-        }).sort({ createdAt: 1 });
+        };
+
+        const messages = await Message.find(query)
+            .sort({ createdAt: 1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Message.countDocuments(query);
 
         res.status(200).json({
             success: true,
             data: messages,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
         });
     } catch (error) {
         next(error);
@@ -52,8 +68,9 @@ const sendMessage = async (req, res, next) => {
 const getConversations = async (req, res, next) => {
     try {
         const userId = req.user._id;
+        const { page = 1, limit = 10 } = req.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
         
-        // This is a simplified version
         const conversations = await Message.aggregate([
             { $match: { $or: [{ sender: userId }, { recipient: userId }] } },
             { $sort: { createdAt: -1 } },
@@ -81,7 +98,9 @@ const getConversations = async (req, res, next) => {
                 lastTime: 1,
                 userName: '$user.fullName',
                 userAvatar: '$user.avatar'
-            }}
+            }},
+            { $skip: skip },
+            { $limit: parseInt(limit) }
         ]);
 
         res.status(200).json({

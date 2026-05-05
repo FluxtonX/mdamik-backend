@@ -10,6 +10,10 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(morgan('dev'));
+// Stripe Webhook needs raw body
+const paymentController = require('./controllers/payment.controller');
+app.post('/api/payments/webhook/stripe', express.raw({ type: 'application/json' }), paymentController.stripeWebhook);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

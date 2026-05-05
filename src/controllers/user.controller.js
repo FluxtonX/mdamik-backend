@@ -20,25 +20,17 @@ const getProfile = async (req, res, next) => {
 const updateProfile = async (req, res, next) => {
     try {
         const { fullName, phoneNumber } = req.body;
+        const user = req.user;
 
-        const user = await User.findById(req.user._id);
+        user.fullName = fullName || user.fullName;
+        user.phoneNumber = phoneNumber || user.phoneNumber;
 
-        if (user) {
-            user.fullName = fullName || user.fullName;
-            user.phoneNumber = phoneNumber || user.phoneNumber;
-
-            const updatedUser = await user.save();
-            res.status(200).json({
-                success: true,
-                message: 'Profile updated successfully',
-                data: updatedUser,
-            });
-        } else {
-            res.status(404).json({
-                success: false,
-                message: 'User not found',
-            });
-        }
+        const updatedUser = await user.save();
+        res.status(200).json({
+            success: true,
+            message: 'Profile updated successfully',
+            data: updatedUser,
+        });
     } catch (error) {
         next(error);
     }

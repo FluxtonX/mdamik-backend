@@ -6,13 +6,26 @@ const Professional = require('../models/Professional');
  */
 const getMaterials = async (req, res, next) => {
     try {
-        const { category } = req.query;
+        const { category, page = 1, limit = 10 } = req.query;
         const query = category ? { category } : {};
-        const materials = await Material.find(query).sort({ title: 1 });
+        
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const materials = await Material.find(query)
+            .sort({ title: 1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Material.countDocuments(query);
 
         res.status(200).json({
             success: true,
             data: materials,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
         });
     } catch (error) {
         next(error);
@@ -24,13 +37,26 @@ const getMaterials = async (req, res, next) => {
  */
 const getProfessionals = async (req, res, next) => {
     try {
-        const { type } = req.query;
+        const { type, page = 1, limit = 10 } = req.query;
         const query = type ? { type } : {};
-        const professionals = await Professional.find(query).sort({ rating: -1 });
+        
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        const professionals = await Professional.find(query)
+            .sort({ rating: -1 })
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Professional.countDocuments(query);
 
         res.status(200).json({
             success: true,
             data: professionals,
+            pagination: {
+                total,
+                page: parseInt(page),
+                limit: parseInt(limit),
+                pages: Math.ceil(total / limit)
+            }
         });
     } catch (error) {
         next(error);
