@@ -8,5 +8,6 @@ router.use(protect);
 
 router.get('/profile', userController.getProfile);
 router.put('/profile', userController.updateProfile);
+router.patch('/preferences', userController.updatePreferences);
 
 module.exports = router;

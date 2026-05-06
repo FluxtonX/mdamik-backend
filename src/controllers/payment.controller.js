@@ -31,7 +31,7 @@ const getSupportedCurrencies = (req, res) => {
  */
 const initiatePayment = async (req, res, next) => {
     try {
-        const { transactionId, gateway, currency = 'USD' } = req.body;
+        const { transactionId, gateway, currency = 'USD', billingDetails } = req.body;
 
         // Validate currency
         paymentService.validateCurrency(currency);
@@ -82,6 +82,10 @@ const initiatePayment = async (req, res, next) => {
         }
 
         transaction.paymentGateway = gateway;
+        transaction.currency = currency;
+        if (billingDetails) {
+            transaction.billingDetails = billingDetails;
+        }
         await transaction.save();
 
         res.status(200).json({ success: true, data: paymentData, transaction });

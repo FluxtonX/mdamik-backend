@@ -19,7 +19,12 @@ const financialRoutes = require('./financial.routes');
 const propertyRoutes = require('./property.routes');
 const chatRoutes = require('./chat.routes');
 const notificationRoutes = require('./notification.routes');
+const managementRoutes = require('./management.routes');
 const paymentRoutes = require('./payment.routes');
+const supportRoutes = require('./support.routes');
+const transportRoutes = require('./transport.routes');
+const securityRoutes = require('./security.routes');
+const systemRoutes = require('./system.routes');
 
 // Use routes
 router.use('/auth', authRoutes);
@@ -30,6 +35,11 @@ router.use('/financials', financialRoutes);
 router.use('/real-estate', propertyRoutes);
 router.use('/chat', chatRoutes);
 router.use('/notifications', notificationRoutes);
+router.use('/management', managementRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/support', supportRoutes);
+router.use('/transport', transportRoutes);
+router.use('/security', securityRoutes);
+router.use('/system', systemRoutes);
 
 module.exports = router;

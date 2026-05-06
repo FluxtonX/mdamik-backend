@@ -6,9 +6,11 @@ const { protect } = require('../middlewares/auth.middleware');
 // All project routes require authentication
 router.use(protect);
 
+router.get('/calculate', projectController.calculateProjectQuantities);
 router.post('/', projectController.createProject);
 router.get('/', projectController.getMyProjects);
 router.get('/:id', projectController.getProjectById);
 router.patch('/:id/status', projectController.updateProjectStatus);
+router.patch('/:projectId/milestones/:milestoneId', projectController.updateMilestone);
 
 module.exports = router;

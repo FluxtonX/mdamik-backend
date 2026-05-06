@@ -48,6 +48,17 @@ const transactionSchema = new mongoose.Schema({
     referenceId: {
         type: String,
         trim: true,
+    },
+    currency: {
+        type: String,
+        default: 'USD',
+    },
+    billingDetails: {
+        fullName: String,
+        phone: String,
+        email: String,
+        address: String,
+        notes: String,
     }
 }, {
     timestamps: true,

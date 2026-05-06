@@ -27,12 +27,27 @@ const projectSchema = new mongoose.Schema({
     materialType: {
         type: String,
         required: true,
-        enum: ['Concrete', 'Sand', 'Backfill', 'Mortar'],
+        enum: ['Concrete', 'Sand', 'Backfill', 'Mortar', 'Steel', 'Brick', 'Wood'],
     },
     status: {
         type: String,
         enum: ['Setup', 'In Progress', 'Completed', 'Cancelled'],
         default: 'Setup',
+    },
+    statusType: {
+        type: String,
+        enum: ['On Track', 'Delayed', 'At Risk', 'Behind Schedule'],
+        default: 'On Track',
+    },
+    progress: {
+        type: Number,
+        default: 0,
+        min: 0,
+        max: 1,
+    },
+    teamCount: {
+        type: Number,
+        default: 0,
     },
     totalCost: {
         type: Number,
@@ -44,6 +59,18 @@ const projectSchema = new mongoose.Schema({
         engineering: { type: Number, default: 0 },
         finishing: { type: Number, default: 0 },
     },
+    milestones: [{
+        title: { type: String, required: true },
+        description: String,
+        status: { 
+            type: String, 
+            enum: ['Pending', 'In Progress', 'Completed'], 
+            default: 'Pending' 
+        },
+        targetDate: Date,
+        actionRequired: { type: Boolean, default: false },
+        actionDesc: String,
+    }]
 }, {
     timestamps: true,
 });

@@ -112,9 +112,68 @@ const updateProjectStatus = async (req, res, next) => {
     }
 };
 
+const calculatorUtil = require('../utils/calculator.util');
+
+/**
+ * Calculate recommended quantities based on area
+ */
+const calculateProjectQuantities = async (req, res, next) => {
+    try {
+        const { area } = req.query;
+        if (!area) {
+            return res.status(400).json({ success: false, message: 'Area is required' });
+        }
+
+        const data = calculatorUtil.calculateQuantities(parseFloat(area));
+
+        res.status(200).json({
+            success: true,
+            data
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+/**
+ * Update project milestone status
+ */
+const updateMilestone = async (req, res, next) => {
+    try {
+        const { projectId, milestoneId } = req.params;
+        const { status, actionRequired, actionDesc } = req.body;
+
+        const project = await Project.findOne({ _id: projectId, userId: req.user._id });
+        if (!project) {
+            return res.status(404).json({ success: false, message: 'Project not found' });
+        }
+
+        const milestone = project.milestones.id(milestoneId);
+        if (!milestone) {
+            return res.status(404).json({ success: false, message: 'Milestone not found' });
+        }
+
+        if (status) milestone.status = status;
+        if (actionRequired !== undefined) milestone.actionRequired = actionRequired;
+        if (actionDesc) milestone.actionDesc = actionDesc;
+
+        await project.save();
+
+        res.status(200).json({
+            success: true,
+            message: 'Milestone updated',
+            data: project
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     createProject,
     getMyProjects,
     getProjectById,
     updateProjectStatus,
+    calculateProjectQuantities,
+    updateMilestone,
 };

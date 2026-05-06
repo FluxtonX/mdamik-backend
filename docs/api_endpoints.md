@@ -219,6 +219,40 @@ Used to update the status of a project (e.g., to 'In Progress').
 
 ---
 
+### 5. Calculate Quantities
+`GET /projects/calculate?area=200`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "area": 200,
+    "units": "m2",
+    "recommendations": [
+      { "material": "Cement", "quantity": 80, "unit": "bags" },
+      { "material": "Sand", "quantity": "20.00", "unit": "m3" }
+    ]
+  }
+}
+```
+
+---
+
+### 6. Update Milestone
+`PATCH /projects/:projectId/milestones/:milestoneId`
+
+**Body:**
+```json
+{
+  "status": "In Progress",
+  "actionRequired": true,
+  "actionDesc": "Please approve the foundation design"
+}
+```
+
+---
+
 ## Services (Marketplace)
 
 ### 1. Get Materials
@@ -575,6 +609,195 @@ Returns a list of users you have chatted with, along with the last message.
 
 ### 2. Mark as Read
 `PATCH /notifications/:id/read`
+
+---
+
+## Management Dashboard
+
+### 1. Get Management Stats
+`GET /management/stats`
+
+Used to retrieve summary statistics for the management dashboard.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "activeProjects": 3,
+    "totalSpent": 45000,
+    "teamMembers": 85
+  }
+}
+```
+
+---
+
+### 2. Get Management Projects
+`GET /management/projects`
+
+Used to list projects with management-specific details like progress and team count.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "...",
+      "name": "Residential Villa",
+      "type": "House",
+      "progress": 0.65,
+      "totalCost": 85000,
+      "status": "In Progress",
+      "statusType": "On Track",
+      "teamCount": 12
+    }
+  ]
+}
+```
+
+---
+
+## User Preferences
+
+### 1. Update Preferences
+`PATCH /user/preferences`
+
+**Body:**
+```json
+{
+  "language": "ar",
+  "region": "Saudi Arabia",
+  "theme": "dark"
+}
+```
+
+---
+
+## Support
+
+### 1. Create Ticket
+`POST /support/tickets`
+
+**Body:**
+```json
+{
+  "subject": "Payment issue",
+  "message": "I paid via Bangkok Bank but it's not showing",
+  "priority": "High"
+}
+```
+
+---
+
+## Transport & Logistics
+
+### 1. Get Transport Estimate
+`GET /transport/estimate`
+
+**Query Params:**
+- `weight`: Load weight in tons.
+- `loadType`: Material, Equipment, Worker, Waste.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": {
+    "recommendedVehicle": "Heavy Truck",
+    "capacity": 10,
+    "estimatedCost": 230,
+    "currency": "USD"
+  }
+}
+```
+
+---
+
+### 2. Book Transport
+`POST /transport/book`
+
+**Body:**
+```json
+{
+  "projectId": "...",
+  "loadType": "Material",
+  "weight": 8,
+  "pickupAddress": "Warehouse A, Sector 4",
+  "deliveryAddress": "Construction Site, Zone 2",
+  "vehicleType": "Heavy Truck"
+}
+```
+
+---
+
+## Security & Verification
+
+### 1. Get Active Sessions
+`GET /security/sessions`
+
+Returns all active login sessions for the user.
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "_id": "...",
+      "device": { "name": "iPhone 14 Pro", "ip": "192.168.1.1" },
+      "lastActive": "2026-05-06T12:00:00Z",
+      "isActive": true
+    }
+  ]
+}
+```
+
+---
+
+### 2. Revoke Session
+`DELETE /security/sessions/:sessionId`
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Session revoked successfully"
+}
+```
+
+---
+
+### 3. Update Verification
+`PATCH /security/verification`
+
+**Body:**
+```json
+{
+  "type": "nationalId",
+  "status": true
+}
+```
+
+---
+
+## System & Configuration
+
+### 1. Get Categories
+`GET /system/categories`
+
+Returns all active service categories with icons and descriptions.
+
+---
+
+### 2. Get Service Bundles
+`GET /system/bundles`
+
+---
+
+### 3. Get Help Articles
+`GET /system/help-articles`
 
 ---
 
