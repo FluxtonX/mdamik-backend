@@ -45,13 +45,27 @@ describe('User Endpoints', () => {
             .set('Authorization', `Bearer ${token}`)
             .send({
                 fullName: 'Updated Name',
-                phoneNumber: '9998887776'
+                phoneNumber: '9998887776',
+                location: 'New York, USA',
+                profileRole: 'Contractor'
             });
         
         expect(res.statusCode).toBe(200);
         expect(res.body.success).toBe(true);
         expect(res.body.data.fullName).toBe('Updated Name');
         expect(res.body.data.phoneNumber).toBe('9998887776');
+        expect(res.body.data.ui.location).toBe('New York, USA');
+        expect(res.body.data.ui.role).toBe('Contractor');
+    });
+
+    it('should update security settings', async () => {
+        const res = await request(app)
+            .patch('/api/user/security-settings')
+            .set('Authorization', `Bearer ${token}`)
+            .send({ twoFactorEnabled: true, twoFactorMethod: 'SMS' });
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.data.twoFactorEnabled).toBe(true);
     });
 
     it('should fail if no token provided', async () => {

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/payment.controller');
+const paymentService = require('../services/payment.service');
 const { protect } = require('../middlewares/auth.middleware');
 const { body, param } = require('express-validator');
 const { validate } = require('../middlewares/validation.middleware');
@@ -11,6 +12,7 @@ const { validate } = require('../middlewares/validation.middleware');
  * @access  Public
  */
 router.get('/currencies', paymentController.getSupportedCurrencies);
+router.get('/methods', paymentController.getPaymentMethods);
 
 /**
  * @route   POST /api/payments/initiate
@@ -22,8 +24,11 @@ router.post('/initiate',
     [
         body('transactionId').isMongoId().withMessage('Valid transaction ID is required'),
         body('gateway')
-            .isIn(['Stripe', 'MyFawry', 'BangkokBank', 'COD'])
-            .withMessage('Valid payment gateway is required: Stripe, MyFawry, BangkokBank, COD'),
+            .custom((value) => {
+                paymentService.normalizeGateway(value);
+                return true;
+            })
+            .withMessage('Valid payment gateway is required: Stripe, MyFawry, BangkokBank, COD, Cash, or Bangkok Bank'),
         body('currency')
             .optional()
             .isIn(['USD', 'SAR', 'SDG', 'EGP', 'THB'])

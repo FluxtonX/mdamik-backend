@@ -24,6 +24,13 @@ const getSupportedCurrencies = (req, res) => {
     res.status(200).json(response);
 };
 
+const getPaymentMethods = (req, res) => {
+    res.status(200).json({
+        success: true,
+        data: paymentService.PAYMENT_METHODS,
+    });
+};
+
 /**
  * POST /api/payments/initiate
  * Initiate a payment via gateway (Stripe, MyFawry, BangkokBank, COD)
@@ -32,6 +39,7 @@ const getSupportedCurrencies = (req, res) => {
 const initiatePayment = async (req, res, next) => {
     try {
         const { transactionId, gateway, currency = 'USD', billingDetails } = req.body;
+        const normalizedGateway = paymentService.normalizeGateway(gateway);
 
         // Validate currency
         paymentService.validateCurrency(currency);
@@ -48,7 +56,7 @@ const initiatePayment = async (req, res, next) => {
         }
 
         let paymentData;
-        switch (gateway) {
+        switch (normalizedGateway) {
             case 'Stripe':
                 paymentData = await paymentService.createStripePaymentIntent(
                     transaction.amount, currency, { transactionId: transaction._id.toString() }
@@ -81,7 +89,7 @@ const initiatePayment = async (req, res, next) => {
                 return res.status(400).json({ success: false, message: 'Unsupported payment gateway' });
         }
 
-        transaction.paymentGateway = gateway;
+        transaction.paymentGateway = normalizedGateway;
         transaction.currency = currency;
         if (billingDetails) {
             transaction.billingDetails = billingDetails;
@@ -281,6 +289,7 @@ const bangkokBankWebhook = async (req, res) => {
 
 module.exports = {
     getSupportedCurrencies,
+    getPaymentMethods,
     initiatePayment,
     createCheckoutSession,
     confirmCODPayment,

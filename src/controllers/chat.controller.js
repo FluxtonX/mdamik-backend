@@ -1,4 +1,11 @@
 const Message = require('../models/Message');
+const {
+    createChatMessage,
+    getInitials,
+    getRelativeTime,
+    markConversationReadByUsers,
+    withMessageUi,
+} = require('../services/chat.service');
 
 /**
  * Get messages between two users
@@ -22,10 +29,14 @@ const getMessages = async (req, res, next) => {
             .limit(parseInt(limit));
 
         const total = await Message.countDocuments(query);
+        await Message.updateMany(
+            { sender: otherUserId, recipient: req.user._id, isRead: false },
+            { isRead: true, readAt: new Date() }
+        );
 
         res.status(200).json({
             success: true,
-            data: messages,
+            data: messages.map((message) => withMessageUi(message, req.user._id)),
             pagination: {
                 total,
                 page: parseInt(page),
@@ -44,18 +55,22 @@ const getMessages = async (req, res, next) => {
 const sendMessage = async (req, res, next) => {
     try {
         const { recipient, content } = req.body;
-
-        const message = new Message({
-            sender: req.user._id,
-            recipient,
+        const { message, notification } = await createChatMessage({
+            senderId: req.user._id,
+            recipientId: recipient,
             content,
         });
-
-        await message.save();
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`user:${recipient}`).emit('message:new', {
+                message: withMessageUi(message, recipient),
+            });
+            io.to(`user:${recipient}`).emit('notification:new', notification);
+        }
 
         res.status(201).json({
             success: true,
-            data: message,
+            data: withMessageUi(message, req.user._id),
         });
     } catch (error) {
         next(error);
@@ -83,7 +98,27 @@ const getConversations = async (req, res, next) => {
                     ]
                 },
                 lastMessage: { $first: '$content' },
-                lastTime: { $first: '$createdAt' }
+                lastTime: { $first: '$createdAt' },
+                lastSender: { $first: '$sender' }
+            }},
+            { $lookup: {
+                from: 'messages',
+                let: { otherUserId: '$_id' },
+                pipeline: [
+                    {
+                        $match: {
+                            $expr: {
+                                $and: [
+                                    { $eq: ['$sender', '$$otherUserId'] },
+                                    { $eq: ['$recipient', userId] },
+                                    { $eq: ['$isRead', false] }
+                                ]
+                            }
+                        }
+                    },
+                    { $count: 'count' }
+                ],
+                as: 'unread'
             }},
             { $lookup: {
                 from: 'users',
@@ -96,8 +131,10 @@ const getConversations = async (req, res, next) => {
                 _id: 1,
                 lastMessage: 1,
                 lastTime: 1,
+                unreadCount: { $ifNull: [{ $arrayElemAt: ['$unread.count', 0] }, 0] },
                 userName: '$user.fullName',
-                userAvatar: '$user.avatar'
+                userAvatar: '$user.avatar',
+                userRole: '$user.profileRole',
             }},
             { $skip: skip },
             { $limit: parseInt(limit) }
@@ -105,8 +142,40 @@ const getConversations = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: conversations,
+            data: conversations.map((conversation) => ({
+                ...conversation,
+                ui: {
+                    initials: getInitials(conversation.userName),
+                    color: '#F28B22',
+                    name: conversation.userName,
+                    message: conversation.lastMessage,
+                    time: getRelativeTime(conversation.lastTime),
+                    unreadCount: conversation.unreadCount,
+                    isOnline: false,
+                },
+            })),
         });
+    } catch (error) {
+        next(error);
+    }
+};
+
+const markConversationRead = async (req, res, next) => {
+    try {
+        const { otherUserId } = req.params;
+        const modifiedCount = await markConversationReadByUsers({
+            currentUserId: req.user._id,
+            otherUserId,
+        });
+        const io = req.app.get('io');
+        if (io) {
+            io.to(`user:${otherUserId}`).emit('message:read', {
+                byUserId: req.user._id,
+                modifiedCount,
+            });
+        }
+
+        res.status(200).json({ success: true, message: 'Conversation marked as read' });
     } catch (error) {
         next(error);
     }
@@ -116,4 +185,5 @@ module.exports = {
     getMessages,
     sendMessage,
     getConversations,
+    markConversationRead,
 };

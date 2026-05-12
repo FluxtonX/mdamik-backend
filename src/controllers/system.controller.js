@@ -6,16 +6,18 @@
 
 const getCategories = (req, res) => {
     const categories = [
-        { id: 'construction', label: 'Construction', icon: 'home_repair_service', desc: 'Build your dream project' },
-        { id: 'real-estate', label: 'Real Estate', icon: 'real_estate_agent', desc: 'Buy, sell, or rent properties' },
-        { id: 'engineering', label: 'Engineering', icon: 'engineering', desc: 'Design & planning' },
-        { id: 'materials', label: 'Materials', icon: 'layers', desc: 'Construction supplies' },
-        { id: 'excavation', label: 'Excavation', icon: 'construction', desc: 'Excavation services' },
-        { id: 'labor', label: 'Labor', icon: 'groups', desc: 'Hire skilled workers' },
-        { id: 'transport', label: 'Transport', icon: 'local_shipping', desc: 'Logistics & shipping' },
-        { id: 'services', label: 'Services', icon: 'settings_suggest', desc: 'Operations support' },
-        { id: 'management', label: 'Management', icon: 'assignment', desc: 'Project oversight' },
-        { id: 'financial', label: 'Financial', icon: 'monetization_on', desc: 'Budgeting & costs' },
+        { id: 'construction', label: 'Construction', icon: 'home_repair_service', desc: 'Build your dream project', routeName: '/construction' },
+        { id: 'real-estate', label: 'Real Estate', icon: 'real_estate_agent', desc: 'Buy, sell, or rent properties', routeName: '/real-estate' },
+        { id: 'engineering', label: 'Engineering', icon: 'engineering', desc: 'Design & planning', routeName: '/engineering' },
+        { id: 'materials', label: 'Materials', icon: 'layers', desc: 'Construction supplies', routeName: '/materials' },
+        { id: 'excavation', label: 'Excavation', icon: 'construction', desc: 'Excavation services', routeName: '/excavation' },
+        { id: 'labor', label: 'Labor', icon: 'groups', desc: 'Hire skilled workers', routeName: '/labor' },
+        { id: 'transport', label: 'Transport', icon: 'local_shipping', desc: 'Logistics & shipping', routeName: '/transport' },
+        { id: 'services', label: 'Services', icon: 'settings_suggest', desc: 'Operations support', routeName: '/services' },
+        { id: 'management', label: 'Management', icon: 'assignment', desc: 'Project oversight', routeName: '/management' },
+        { id: 'financial', label: 'Financial', icon: 'monetization_on', desc: 'Budgeting & costs', routeName: '/financial' },
+        { id: 'account', label: 'Account', icon: 'account_balance', desc: 'Settings & verification', routeName: '/profile' },
+        { id: 'support', label: 'Support', icon: 'support_agent', desc: 'Help & customer support', routeName: '/profile/support' },
     ];
 
     res.status(200).json({ success: true, data: categories });

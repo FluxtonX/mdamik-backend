@@ -1,6 +1,6 @@
 const Transport = require('../models/Transport');
 const transportUtil = require('../utils/transport.util');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 
 /**
  * Get transport estimate
@@ -55,7 +55,7 @@ const bookTransport = async (req, res, next) => {
             deliveryLocation: { address: deliveryAddress },
             vehicleType,
             estimatedCost,
-            trackingId: `TRK-${uuidv4().substring(0, 8).toUpperCase()}`
+            trackingId: `TRK-${crypto.randomUUID().substring(0, 8).toUpperCase()}`
         });
 
         await transport.save();

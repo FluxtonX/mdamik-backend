@@ -16,8 +16,18 @@ const notificationSchema = new mongoose.Schema({
     },
     type: {
         type: String,
-        enum: ['Chat', 'Project', 'Financial', 'System'],
+        enum: ['Chat', 'Project', 'Financial', 'System', 'Offer', 'Support'],
         default: 'System',
+    },
+    priority: {
+        type: String,
+        enum: ['Low', 'Normal', 'High'],
+        default: 'Normal',
+    },
+    action: {
+        routeName: String,
+        entityId: String,
+        entityType: String,
     },
     isRead: {
         type: Boolean,
@@ -26,5 +36,7 @@ const notificationSchema = new mongoose.Schema({
 }, {
     timestamps: true,
 });
+
+notificationSchema.index({ recipient: 1, isRead: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

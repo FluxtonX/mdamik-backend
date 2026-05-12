@@ -1,11 +1,75 @@
 const Project = require('../models/Project');
+const Transaction = require('../models/Transaction');
+
+const formatMoney = (amount) => {
+    const value = Number(amount || 0);
+    if (value >= 1000) return `$${Math.round(value / 1000)}k`;
+    return `$${value.toLocaleString('en-US')}`;
+};
+
+const getCurrentMilestone = (project) => {
+    const milestones = project.milestones || [];
+    return milestones.find((item) => item.status === 'In Progress')
+        || milestones.find((item) => item.status === 'Pending')
+        || milestones[milestones.length - 1]
+        || null;
+};
+
+const withProjectUi = async (projectDoc, userId) => {
+    const project = projectDoc.toObject ? projectDoc.toObject() : projectDoc;
+    const spentRow = await Transaction.aggregate([
+        { $match: { userId, projectId: projectDoc._id, type: 'Debit' } },
+        { $group: { _id: '$projectId', spent: { $sum: '$amount' } } },
+    ]);
+    const spent = spentRow[0] ? spentRow[0].spent : 0;
+    const currentMilestone = getCurrentMilestone(project);
+
+    return {
+        ...project,
+        spent,
+        remaining: Math.max((project.totalCost || 0) - spent, 0),
+        currentMilestone,
+        ui: {
+            title: project.name,
+            subtitle: `${project.type} - ${project.phase || 'Phase 1'}`,
+            progress: project.progress,
+            progressPercent: Math.round((project.progress || 0) * 100),
+            status: project.statusType,
+            budget: formatMoney(project.totalCost),
+            spent: formatMoney(spent),
+            teamCount: project.teamCount || (project.teamMembers ? project.teamMembers.length : 0),
+            currentMilestone: currentMilestone ? {
+                id: currentMilestone._id,
+                title: currentMilestone.title,
+                progress: currentMilestone.progress,
+                progressPercent: Math.round((currentMilestone.progress || 0) * 100),
+                targetDate: currentMilestone.targetDate,
+                status: currentMilestone.status,
+            } : null,
+        },
+    };
+};
 
 /**
  * Create a new project
  */
 const createProject = async (req, res, next) => {
     try {
-        const { name, type, services, area, materialType, totalCost, costBreakdown } = req.body;
+        const {
+            name,
+            type,
+            services,
+            area,
+            materialType,
+            totalCost,
+            costBreakdown,
+            phase,
+            startDate,
+            targetDate,
+            milestones,
+            teamMembers,
+            pendingActions,
+        } = req.body;
 
         const newProject = new Project({
             userId: req.user._id,
@@ -16,6 +80,13 @@ const createProject = async (req, res, next) => {
             materialType,
             totalCost,
             costBreakdown,
+            phase,
+            startDate,
+            targetDate,
+            milestones,
+            teamMembers,
+            teamCount: teamMembers ? teamMembers.length : 0,
+            pendingActions,
         });
 
         await newProject.save();
@@ -23,7 +94,7 @@ const createProject = async (req, res, next) => {
         res.status(201).json({
             success: true,
             message: 'Project created successfully',
-            data: newProject,
+            data: await withProjectUi(newProject, req.user._id),
         });
     } catch (error) {
         next(error);
@@ -47,7 +118,7 @@ const getMyProjects = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: projects,
+            data: await Promise.all(projects.map((project) => withProjectUi(project, req.user._id))),
             pagination: {
                 total,
                 page: parseInt(page),
@@ -76,7 +147,7 @@ const getProjectById = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: project,
+            data: await withProjectUi(project, req.user._id),
         });
     } catch (error) {
         next(error);
@@ -92,7 +163,7 @@ const updateProjectStatus = async (req, res, next) => {
         const project = await Project.findOneAndUpdate(
             { _id: req.params.id, userId: req.user._id },
             { status },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!project) {

@@ -14,6 +14,7 @@ const sessionSchema = new mongoose.Schema({
         name: String, // e.g. iPhone 14 Pro
         os: String,
         ip: String,
+        location: String,
     },
     lastActive: {
         type: Date,

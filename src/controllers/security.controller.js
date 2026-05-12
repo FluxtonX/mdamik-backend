@@ -1,6 +1,31 @@
 const Session = require('../models/Session');
 const User = require('../models/User');
 
+const getRelativeTime = (date) => {
+    const seconds = Math.max(Math.floor((Date.now() - new Date(date).getTime()) / 1000), 0);
+    if (seconds < 60) return 'Active now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minutes ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hours ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} days ago`;
+};
+
+const withSessionUi = (sessionDoc) => {
+    const session = sessionDoc.toObject ? sessionDoc.toObject() : sessionDoc;
+    const location = session.device && session.device.location ? session.device.location : 'Unknown location';
+    return {
+        ...session,
+        ui: {
+            name: session.device && session.device.name ? session.device.name : 'Unknown Device',
+            details: `${location} - ${getRelativeTime(session.lastActive)}`,
+            isActive: session.isActive,
+            os: session.device && session.device.os,
+        },
+    };
+};
+
 /**
  * Get active sessions for the current user
  */
@@ -11,7 +36,7 @@ const getSessions = async (req, res, next) => {
 
         res.status(200).json({
             success: true,
-            data: sessions
+            data: sessions.map(withSessionUi)
         });
     } catch (error) {
         next(error);
@@ -27,7 +52,7 @@ const revokeSession = async (req, res, next) => {
         const session = await Session.findOneAndUpdate(
             { _id: sessionId, userId: req.user._id },
             { isActive: false },
-            { new: true }
+            { returnDocument: 'after' }
         );
 
         if (!session) {

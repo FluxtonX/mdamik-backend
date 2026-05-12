@@ -3,6 +3,7 @@ const app = require('../src/app');
 const mongoose = require('mongoose');
 const User = require('../src/models/User');
 const Project = require('../src/models/Project');
+const Transaction = require('../src/models/Transaction');
 
 describe('Project Endpoints', () => {
     let testUser;
@@ -28,6 +29,7 @@ describe('Project Endpoints', () => {
     afterAll(async () => {
         await User.deleteOne({ _id: testUser._id });
         await Project.deleteMany({ userId: testUser._id });
+        await Transaction.deleteMany({ userId: testUser._id });
         await mongoose.connection.close();
     });
 
@@ -47,12 +49,29 @@ describe('Project Endpoints', () => {
                     labor: 8200,
                     engineering: 4800,
                     finishing: 3500
-                }
+                },
+                phase: 'Phase 1',
+                targetDate: '2026-06-30T00:00:00.000Z',
+                milestones: [
+                    {
+                        title: 'Foundation & Structure',
+                        status: 'In Progress',
+                        progress: 0.75,
+                        targetDate: '2026-05-15T00:00:00.000Z',
+                        actionRequired: true,
+                        actionDesc: 'Material delivery approval needed',
+                    },
+                ],
+                teamMembers: [
+                    { name: 'Member One', role: 'Engineer', initials: 'M1' },
+                ],
             });
         
         expect(res.statusCode).toBe(201);
         expect(res.body.success).toBe(true);
         expect(res.body.data.name).toBe('My New House');
+        expect(res.body.data.ui.currentMilestone.title).toBe('Foundation & Structure');
+        expect(res.body.data.ui.teamCount).toBe(1);
         projectId = res.body.data._id;
     });
 
@@ -65,6 +84,7 @@ describe('Project Endpoints', () => {
         expect(res.body.success).toBe(true);
         expect(Array.isArray(res.body.data)).toBe(true);
         expect(res.body.data.length).toBe(1);
+        expect(res.body.data[0].ui.budget).toBe('$29k');
     });
 
     it('should get project by id', async () => {

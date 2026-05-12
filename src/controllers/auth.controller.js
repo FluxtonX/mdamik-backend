@@ -6,7 +6,7 @@ const User = require('../models/User');
  */
 const register = async (req, res, next) => {
     try {
-        const { fullName, email, phoneNumber, firebaseUid } = req.body;
+        const { fullName, email, phoneNumber, firebaseUid, profileRole } = req.body;
 
         // Check if user already exists
         const existingUser = await User.findOne({ $or: [{ email }, { firebaseUid }] });
@@ -22,6 +22,7 @@ const register = async (req, res, next) => {
             email,
             phoneNumber,
             firebaseUid,
+            profileRole,
         });
 
         await newUser.save();
@@ -78,7 +79,7 @@ const sendOtp = async (req, res, next) => {
         await Otp.findOneAndUpdate(
             { phoneNumber },
             { otp, expiresAt: new Date(Date.now() + 10 * 60 * 1000) },
-            { upsert: true, new: true }
+            { upsert: true, returnDocument: 'after' }
         );
 
         res.status(200).json({

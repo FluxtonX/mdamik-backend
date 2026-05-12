@@ -61,6 +61,14 @@ describe('Payment Endpoints', () => {
         expect(res.body.data).toHaveProperty('SDG');
     });
 
+    it('should return frontend payment methods', async () => {
+        const res = await request(app).get('/api/payments/methods');
+        expect(res.statusCode).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect(res.body.data.some((method) => method.frontendValues.includes('Cash'))).toBe(true);
+        expect(res.body.data.some((method) => method.frontendValues.includes('Bangkok Bank'))).toBe(true);
+    });
+
     it('should reject payment initiation with invalid gateway', async () => {
         const res = await request(app)
             .post('/api/payments/initiate')
@@ -77,11 +85,11 @@ describe('Payment Endpoints', () => {
         expect(res.statusCode).toBe(400);
     });
 
-    it('should initiate COD payment successfully', async () => {
+    it('should initiate COD payment successfully from Flutter Cash label', async () => {
         const res = await request(app)
             .post('/api/payments/initiate')
             .set('Authorization', `Bearer ${token}`)
-            .send({ transactionId, gateway: 'COD', currency: 'SDG' });
+            .send({ transactionId, gateway: 'Cash', currency: 'SDG' });
         expect(res.statusCode).toBe(200);
         expect(res.body.success).toBe(true);
         expect(res.body.transaction.paymentGateway).toBe('COD');

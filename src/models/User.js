@@ -28,9 +28,26 @@ const userSchema = new mongoose.Schema({
         enum: ['user', 'admin'],
         default: 'user',
     },
+    profileRole: {
+        type: String,
+        enum: ['Client / Owner', 'Contractor', 'Worker / Freelancer', 'Engineer / Consultant', 'Supplier'],
+        default: 'Client / Owner',
+    },
+    location: {
+        type: String,
+        default: '',
+        trim: true,
+    },
+    avatar: {
+        type: String,
+    },
     isActive: {
         type: Boolean,
         default: true,
+    },
+    security: {
+        twoFactorEnabled: { type: Boolean, default: false },
+        twoFactorMethod: { type: String, enum: ['SMS', 'Email'], default: 'SMS' },
     },
     preferences: {
         language: { type: String, enum: ['en', 'ar'], default: 'en' },

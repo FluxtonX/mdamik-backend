@@ -39,4 +39,22 @@ const protect = async (req, res, next) => {
     }
 };
 
-module.exports = { protect };
+const optionalProtect = async (req, res, next) => {
+    try {
+        if (!req.headers.authorization || !req.headers.authorization.startsWith('Bearer')) {
+            return next();
+        }
+
+        const token = req.headers.authorization.split(' ')[1];
+        const user = await User.findOne({ firebaseUid: token });
+        if (user) {
+            req.user = user;
+        }
+
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
+
+module.exports = { protect, optionalProtect };

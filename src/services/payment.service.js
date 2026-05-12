@@ -14,6 +14,47 @@ const SUPPORTED_CURRENCIES = {
     THB: { code: 'thb', name: 'Thai Baht',        symbol: '฿', stripeSupported: true  },
 };
 
+const PAYMENT_METHODS = [
+    {
+        gateway: 'MyFawry',
+        label: 'MyFawry',
+        frontendValues: ['MyFawry', 'My Fawry'],
+        supportedCurrencies: ['SDG', 'EGP', 'USD'],
+        description: 'Pay with MyFawry app',
+    },
+    {
+        gateway: 'COD',
+        label: 'Cash',
+        frontendValues: ['Cash', 'COD', 'Cash on Delivery'],
+        supportedCurrencies: ['SDG', 'USD', 'SAR'],
+        description: 'Pay with cash on delivery',
+    },
+    {
+        gateway: 'BangkokBank',
+        label: 'Bangkok Bank',
+        frontendValues: ['Bangkok Bank', 'BangkokBank'],
+        supportedCurrencies: ['USD', 'THB', 'SDG'],
+        description: 'Pay with Bangkok Bank app',
+    },
+    {
+        gateway: 'Stripe',
+        label: 'Card',
+        frontendValues: ['Card', 'Stripe'],
+        supportedCurrencies: ['USD', 'SAR', 'EGP', 'THB'],
+        description: 'Pay by card through Stripe',
+    },
+];
+
+const normalizeGateway = (gateway) => {
+    const method = PAYMENT_METHODS.find((item) =>
+        item.gateway === gateway || item.frontendValues.includes(gateway)
+    );
+    if (!method) {
+        throw new Error(`Unsupported payment gateway: ${gateway}`);
+    }
+    return method.gateway;
+};
+
 /**
  * Validate that a currency code is supported
  */
@@ -175,7 +216,9 @@ const verifyBangkokBankWebhook = (payload, signature) => {
 
 module.exports = {
     SUPPORTED_CURRENCIES,
+    PAYMENT_METHODS,
     validateCurrency,
+    normalizeGateway,
     createStripePaymentIntent,
     createStripeCheckoutSession,
     createFawryPayment,

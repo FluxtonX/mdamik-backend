@@ -24,8 +24,8 @@ describe('Chat & Notification Endpoints', () => {
 
     afterAll(async () => {
         await User.deleteMany({ _id: { $in: [user1._id, user2._id] } });
-        await Message.deleteMany({ $or: [{ sender: user1._id }, { recipient: user1._id }] });
-        await Notification.deleteMany({ recipient: user1._id });
+        await Message.deleteMany({ $or: [{ sender: user1._id }, { recipient: user1._id }, { sender: user2._id }, { recipient: user2._id }] });
+        await Notification.deleteMany({ recipient: { $in: [user1._id, user2._id] } });
         await mongoose.connection.close();
     });
 
@@ -46,6 +46,25 @@ describe('Chat & Notification Endpoints', () => {
         expect(getRes.statusCode).toBe(200);
         expect(getRes.body.data.length).toBe(1);
         expect(getRes.body.data[0].content).toBe('Hello User Two');
+        expect(getRes.body.data[0].ui.isMe).toBe(true);
+
+        const notification = await Notification.findOne({ recipient: user2._id, type: 'Chat' });
+        expect(notification).toBeTruthy();
+    });
+
+    it('should get conversation list with unread counts', async () => {
+        await request(app)
+            .post('/api/chat/messages')
+            .set('Authorization', `Bearer ${token2}`)
+            .send({ recipient: user1._id, content: 'Reply from User Two' });
+
+        const res = await request(app)
+            .get('/api/chat/conversations')
+            .set('Authorization', `Bearer ${token1}`);
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.data[0].ui.name).toBe('User Two');
+        expect(res.body.data[0].ui.unreadCount).toBeGreaterThan(0);
     });
 
     it('should get notifications', async () => {
@@ -62,6 +81,16 @@ describe('Chat & Notification Endpoints', () => {
             .set('Authorization', `Bearer ${token1}`);
         
         expect(res.statusCode).toBe(200);
-        expect(res.body.data.length).toBe(1);
+        expect(res.body.data.length).toBeGreaterThan(0);
+        expect(res.body.data[0].ui.title).toBeDefined();
+    });
+
+    it('should mark all notifications as read', async () => {
+        const res = await request(app)
+            .patch('/api/notifications/read-all')
+            .set('Authorization', `Bearer ${token1}`);
+
+        expect(res.statusCode).toBe(200);
+        expect(res.body.data.modifiedCount).toBeGreaterThanOrEqual(1);
     });
 });
